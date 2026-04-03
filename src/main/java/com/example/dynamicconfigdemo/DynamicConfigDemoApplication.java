@@ -1,4 +1,4 @@
-package com.example.Dynamic_Config_Demo;
+package com.example.dynamicconfigdemo;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

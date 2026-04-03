@@ -1,4 +1,4 @@
-package com.example.Dynamic_Config_Demo;
+package com.example.dynamicconfigdemo;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.provider.Arguments;
