@@ -1,0 +1,13 @@
+# Pipeline 관련
+workflow-aggregator:latest
+pipeline-stage-view:latest
+git:latest
+
+# JaCoCo 리포트를 Jenkins UI에 표시
+jacoco:latest
+
+# 빌드 결과 시각화
+junit:latest
+
+# Docker 관련 (DooD 환경에서 파이프라인 내 docker 명령 사용 시)
+docker-workflow:latest

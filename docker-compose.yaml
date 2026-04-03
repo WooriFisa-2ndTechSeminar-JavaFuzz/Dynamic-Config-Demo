@@ -1,0 +1,21 @@
+services:
+  jenkins:
+    build:
+      context: .
+      args:
+        # 호스트의 docker 소켓 GID 를 빌드 시 자동 주입
+        DOCKER_GID: "${DOCKER_GID:-999}"
+    ports:
+      - "8080:8080"    # Jenkins 웹 UI
+      - "50000:50000"  # Jenkins 에이전트 통신 포트
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      # DooD: 호스트 Docker 소켓 마운트 — Testcontainers 가 이 소켓으로 MySQL 생성
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # 초기 설정 마법사 스킵 (자동화 환경)
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+    restart: unless-stopped
+
+volumes:
+  jenkins_home:
