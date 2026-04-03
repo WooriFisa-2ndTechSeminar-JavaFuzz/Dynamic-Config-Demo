@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Dynamic Config Demo</title>
+    <style>
+        .result-box { border: 1px solid #ccc; padding: 10px; margin-top: 20px; background-color: #f9f9f9; }
+        .error-box { color: red; font-weight: bold; border: 1px solid red; padding: 10px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>동적 설정 관리 시스템</h1>
+
+    <fieldset>
+        <legend>설정 등록</legend>
+        <form action="/save" method="post">
+            <label>Key: <input type="text" name="key" required/></label><br/>
+            <label>Value (SpEL 지원): <input type="text" name="value" required/></label><br/>
+            <label>Reference Key: <input type="text" name="refKey"/></label><br/>
+            <button type="submit">저장</button>
+        </form>
+    </fieldset>
+
+    <br/>
+
+    <fieldset>
+        <legend>설정 조회 및 참조 추적</legend>
+        <form action="/search" method="get">
+            <label>조회할 Key: <input type="text" name="searchKey" required/></label>
+            <button type="submit">조회</button>
+        </form>
+    </fieldset>
+
+    <div th:if="${path}" class="result-box">
+        <p><strong>조회한 키:</strong> <span th:text="${searchKey}"></span></p>
+        <p><strong>참조 경로:</strong> <span th:text="${path}"></span></p>
+        <p><strong>최종 평가 값:</strong> <span th:text="${finalValue}"></span></p>
+    </div>
+
+    <div th:if="${error}" class="error-box">
+        <p th:text="${error}"></p>
+    </div>
+</body>
+</html>
