@@ -25,9 +25,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #    Spring Boot 4.x 는 Maven 3.9+ 필요
 #    ARG 로 버전을 외부 주입 가능하게 유지
 # ----------------------------------------------------------------
-ARG MAVEN_VERSION=3.9.9
+
+# ARG MAVEN_VERSION=3.9.9
+# RUN curl -fsSL \
+#       https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz \
+#     | tar -xz -C /opt \
+#  && ln -s /opt/apache-maven-${MAVEN_VERSION}/bin/mvn /usr/local/bin/mvn
+
+ARG MAVEN_VERSION=3.8.7
 RUN curl -fsSL \
-      https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz \
+      https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz \
     | tar -xz -C /opt \
  && ln -s /opt/apache-maven-${MAVEN_VERSION}/bin/mvn /usr/local/bin/mvn
 
