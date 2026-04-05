@@ -1,8 +1,8 @@
 # clear corpus
-rm -rf .cifuzz-corpus/com.example.SnakeYamlFuzzTest/fuzzYamlParser/*
+rm -rf .cifuzz-corpus/com.example.dynamicconfigdemo.DynamicConfigDemoApplicationTests/fuzzDynamicConfiguration/*
 
 # clear crash
-rm -rf src/test/resources/com/example/SnakeYamlFuzzTestInputs/fuzzYamlParser/*
+rm -rf src/test/resources/com/example/dynamicconfigdemo/DynamicConfigDemoApplicationTestsInputs/fuzzDynamicConfiguration/*
 
 # maven clean
 mvn clean
