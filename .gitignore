@@ -1,8 +1,4 @@
 HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
 
 ### STS ###
 .apt_generated
@@ -31,3 +27,36 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Maven
+/target/*
+.mvn/wrapper/maven-wrapper.jar
+
+# !Caution - 반드시 확인 후 커밋할 것
+# Keep JaCoCo site report tracked
+!/target/site/
+!/target/site/**
+
+# !Caution - 반드시 확인 후 커밋할 것
+# Keep error message while reproducing crashes
+!/target/surefire-reports/
+!/target/surefire-reports/**
+
+# Java compiled files
+*.class
+
+# Logs
+*.log
+
+# Package files
+*.jar
+*.war
+*.ear
+
+# JVM crash logs
+hs_err_pid*
+replay_pid*
+
+# OS files
+.DS_Store
+Thumbs.db
