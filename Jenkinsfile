@@ -2,9 +2,7 @@ pipeline {
     agent any
 
     environment {
-        // Jazzer 크래시 파일 저장 경로 (Dockerfile 에서 미리 생성한 디렉토리)
-        JAZZER_FINDINGS_DIR = '/var/jenkins_home/jazzer-findings'
-        // Maven 로컬 캐시를 워크스페이스 내에 격리 → 병렬 빌드 충돌 방지
+        // Maven 로컬 캐시를 워크스페이스 내에 격리하여 병렬 빌드 충돌 방지
         MAVEN_OPTS = '-Dmaven.repo.local=.m2/repository'
     }
 
@@ -18,68 +16,56 @@ pipeline {
 
         stage('Build') {
             steps {
-                // compile 만 — 테스트 제외, 의존성 다운로드 확인
+                // compile만 수행하여 의존성 다운로드 및 문법 오류 사전 확인
                 sh 'mvn clean compile -B'
             }
         }
 
-        stage('Fuzz + Unit Test') {
+        stage('Fuzzing') {
             steps {
-                // JAZZER_FUZZ=1 : 그레이박스 퍼징 모드 활성화
-                // --keep_going=0 : 첫 크래시 발생 즉시 중단
-                // test 페이즈 실행 → Surefire → Jazzer + JUnit 테스트 실행
-                // testFailureIgnore=false 로 오버라이드 → 크래시 시 즉시 빌드 실패
-
-                // sh '''
-                //     mvn test -B \
-                //         -Dsurefire.testFailureIgnore=false \
-                //         -DJAZZER_FUZZ=1 \
-                //         -DJAZZER_ARGS="--keep_going=0 -artifact_prefix=${JAZZER_FINDINGS_DIR}/"
-                // '''
-
-                sh '''
-                    JAZZER_FUZZ=1 mvn test \
-                        -Dmaven.test.failure.ignore=true \
-                        -Djazzer.keep_going=0 \
-                        -Dtest=DynamicConfigDemoApplicationTests
-                    '''
+                // 1. Jazzer 퍼징 실행 
+                // testFailureIgnore=true 이므로 크래시가 발생해도 Maven은 Exit 0(성공)을 반환하며 종료됨
+                sh 'JAZZER_FUZZ=1 mvn test -Pfuzz -Dmaven.test.failure.ignore=true -Djazzer.keep_going=0 -Dtest=DynamicConfigDemoApplicationTests'
+                
+                // 2. 크래시 파일 탐지 및 파이프라인 제어 로직
+                script {
+                    // jazzer-junit이 생성하는 하위 디렉토리(src/test/resources/...)를 모두 포함하여 crash-* 파일을 찾음
+                    def crashes = sh(
+                        script: "find . -name 'crash-*' | wc -l",
+                        returnStdout: true
+                    ).trim()
+                    
+                    if (crashes.toInteger() > 0) {
+                        // 크래시가 1개 이상 존재하면 error() 함수를 호출하여 파이프라인을 강제로 FAILURE 상태로 전환하고 중단시킴
+                        error("Jazzer 크래시 감지: ${crashes}개 발견 — 빌드 중단")
+                    } else {
+                        echo "크래시 미발견: 퍼징 단계를 무사히 통과했습니다."
+                    }
+                }
             }
             post {
-                // 크래시 파일이 생겼으면 아티팩트로 보관 (원인 분석용)
                 always {
-                    archiveArtifacts artifacts: 'jazzer-findings/**', allowEmptyArchive: true
+                    // 빌드 성공/실패 여부와 상관없이 발견된 크래시 파일과 Surefire 리포트를 Jenkins UI에 아카이빙
+                    archiveArtifacts artifacts: '**/crash-*, **/target/surefire-reports/*.xml', allowEmptyArchive: true
                     junit testResults: '**/target/surefire-reports/*.xml', allowEmptyResults: true
-                }
-                // 크래시 파일 존재 여부로 빌드 실패 명시
-                failure {
-                    script {
-                        def crashes = sh(
-                            script: "find ${JAZZER_FINDINGS_DIR} -name 'crash-*' | wc -l",
-                            returnStdout: true
-                        ).trim()
-                        if (crashes.toInteger() > 0) {
-                            error("Jazzer 크래시 감지: ${crashes}개 — 빌드 중단")
-                        }
-                    }
                 }
             }
         }
 
         stage('Coverage Check') {
             steps {
-                // verify 페이즈: JaCoCo check goal 실행
-                // pom.xml 의 check-coverage execution 이 여기서 동작
-                // 커버리지 미달 시 Maven 이 BUILD FAILURE → Jenkins 빌드 실패
-                sh 'mvn verify -B -DskipTests'
+                // verify 페이즈: JaCoCo check goal 실행 (회귀 모드)
+                // 코퍼스와 크래시 파일들을 재실행하여 커버리지를 측정하고, pom.xml 기준 미달 시 Maven이 에러를 발생시킴
+                sh 'mvn test verify -Pregression -Dmaven.test.failure.ignore=true -Djazzer.keep_going=0 -Dtest=DynamicConfigDemoApplicationTests'
             }
             post {
                 always {
-                    // Jenkins UI 에 JaCoCo 리포트 표시 (jacoco 플러그인 필요)
+                    // Jenkins 플러그인을 통해 커버리지 결과를 대시보드에 시각화
                     jacoco(
                         execPattern: '**/target/jacoco.exec',
                         classPattern: '**/target/classes',
                         sourcePattern: '**/src/main/java',
-                        inclusionPattern: 'org/yaml/**'
+                        inclusionPattern: '**/com/example/dynamicconfigdemo/**'
                     )
                 }
             }
@@ -87,7 +73,7 @@ pipeline {
 
         stage('Package') {
             steps {
-                // 테스트는 앞 스테이지에서 완료 → 스킵하고 jar 만 생성
+                // 앞선 단계에서 검증이 끝났으므로 테스트를 스킵하고 JAR 패키징 수행
                 sh 'mvn package -B -DskipTests'
                 archiveArtifacts artifacts: 'target/*.jar'
             }
@@ -96,10 +82,10 @@ pipeline {
 
     post {
         failure {
-            echo '빌드 실패 — Jazzer 크래시 또는 JaCoCo 커버리지 기준 미달을 확인하세요.'
+            echo '빌드 실패 — 컴파일 에러 또는 크래시(보안 취약점) 감지 또는 커버리지 기준 미달'
         }
         success {
-            echo '빌드 성공 — 퍼징 통과, 커버리지 기준 충족'
+            echo '빌드 성공 — 퍼징 통과 및 커버리지 기준 충족, 배포 준비 완료'
         }
     }
 }
