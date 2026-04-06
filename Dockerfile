@@ -1,7 +1,6 @@
 # ================================================================
-# Jenkins CI 이미지 — Spring Boot 4.x / Jazzer / JaCoCo / DooD
-# 베이스: jenkins/jenkins LTS + JDK 17
-# Debian Trixie 기반 (jenkins/jenkins:2.504-jdk17 확인된 최신 LTS)
+# Jenkins CI 이미지 — Spring Boot / Jazzer / JaCoCo / DooD
+# 베이스: jenkins/jenkins:2.504-jdk17
 # ================================================================
 FROM jenkins/jenkins:2.504-jdk17
 
@@ -21,16 +20,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 # ----------------------------------------------------------------
-# 2. Maven 직접 설치 (apt 버전은 3.6 수준 구버전 — Spring Boot 4.x 비호환)
-#    Spring Boot 4.x 는 Maven 3.9+ 필요
+# 2. Maven 직접 설치
 #    ARG 로 버전을 외부 주입 가능하게 유지
 # ----------------------------------------------------------------
-
-# ARG MAVEN_VERSION=3.9.9
-# RUN curl -fsSL \
-#       https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz \
-#     | tar -xz -C /opt \
-#  && ln -s /opt/apache-maven-${MAVEN_VERSION}/bin/mvn /usr/local/bin/mvn
 
 ARG MAVEN_VERSION=3.8.7
 RUN curl -fsSL \
@@ -65,14 +57,7 @@ RUN groupadd -g ${DOCKER_GID} docker 2>/dev/null || true \
  && gpasswd -a jenkins docker
 
 # ----------------------------------------------------------------
-# 5. Jazzer 퍼징 중 생성되는 크래시 파일 저장 디렉토리 사전 생성
-#    Jenkins 가 jenkins 유저로 실행되므로 소유권 부여
-# ----------------------------------------------------------------
-RUN mkdir -p /var/jenkins_home/jazzer-findings \
- && chown jenkins:jenkins /var/jenkins_home/jazzer-findings
-
-# ----------------------------------------------------------------
-# 6. Jenkins 플러그인 사전 설치
+# 5. Jenkins 플러그인 사전 설치
 #    plugins.txt 에 선언된 플러그인 목록을 이미지 빌드 시 설치
 #    → 컨테이너 최초 기동 시 플러그인 다운로드 대기 없음
 # ----------------------------------------------------------------
