@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConfigController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report"></a> &gt; <a href="index.source.html" class="el_package">com.example.dynamicconfigdemo.controller</a> &gt; <span class="el_source">ConfigController.java</span></div><h1>ConfigController.java</h1><pre class="source lang-java linenums">package com.example.dynamicconfigdemo.controller;
+
+import com.example.dynamicconfigdemo.service.ConfigService;
+
+import java.util.ArrayList;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+@Controller
+public class ConfigController {
+
+    private final ConfigService configService;
+
+<span class="fc" id="L18">    public ConfigController(ConfigService configService) {</span>
+<span class="fc" id="L19">        this.configService = configService;</span>
+<span class="fc" id="L20">    }</span>
+
+    @GetMapping(&quot;/&quot;)
+    public String index() {
+<span class="nc" id="L24">        return &quot;index&quot;;</span>
+    }
+
+    @PostMapping(&quot;/save&quot;)
+    public String save(@RequestParam String key, @RequestParam String value, @RequestParam(required = false) String refKey, Model model) {
+<span class="nc" id="L29">        configService.saveConfig(key, value, refKey);</span>
+        
+        // 저장 직후 바로 평가하여 결과를 UI에 표시 (이때 서버에서 취약점 발현 가능)
+<span class="nc" id="L32">        String evaluatedResult = configService.evaluateConfig(key);</span>
+<span class="nc" id="L33">        model.addAttribute(&quot;result&quot;, &quot;평가 결과: &quot; + evaluatedResult);</span>
+        
+<span class="nc" id="L35">        return &quot;index&quot;;</span>
+    }
+
+    @GetMapping(&quot;/search&quot;)
+    public String search(@RequestParam String searchKey, Model model) {
+        try {
+            // 경로 추적 시작
+<span class="nc" id="L42">            ConfigService.ConfigResolution resolution = configService.resolveConfigWithHistory(searchKey, new ArrayList&lt;&gt;());</span>
+        
+<span class="nc" id="L44">            model.addAttribute(&quot;searchKey&quot;, searchKey);</span>
+<span class="nc" id="L45">            model.addAttribute(&quot;path&quot;, String.join(&quot; -&gt; &quot;, resolution.path));</span>
+<span class="nc" id="L46">            model.addAttribute(&quot;finalValue&quot;, resolution.finalValue);</span>
+<span class="nc" id="L47">        } catch (StackOverflowError e) {</span>
+            // 순환 참조 발생 시 에러 메시지 표시
+<span class="nc" id="L49">            model.addAttribute(&quot;error&quot;, &quot;StackOverflowError: 순환 참조가 감지되었습니다!&quot;);</span>
+        }
+<span class="nc" id="L51">        return &quot;index&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
