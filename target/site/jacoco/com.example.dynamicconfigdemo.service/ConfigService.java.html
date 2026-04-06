@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConfigService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report"></a> &gt; <a href="index.source.html" class="el_package">com.example.dynamicconfigdemo.service</a> &gt; <span class="el_source">ConfigService.java</span></div><h1>ConfigService.java</h1><pre class="source lang-java linenums">package com.example.dynamicconfigdemo.service;
+
+import com.example.dynamicconfigdemo.entity.AppConfig;
+import com.example.dynamicconfigdemo.repository.ConfigRepository;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.stereotype.Service;
+
+@Service
+public class ConfigService {
+
+    private final ConfigRepository repository;
+
+<span class="fc" id="L18">    public ConfigService(ConfigRepository repository) {</span>
+<span class="fc" id="L19">        this.repository = repository;</span>
+<span class="fc" id="L20">    }</span>
+
+    // 저장(Create)
+    public void saveConfig(String key, String value, String refKey) {
+<span class="pc bpc" id="L24" title="1 of 4 branches missed.">        if (key == null || key.trim().isEmpty()) return;</span>
+
+        // refKey가 빈 문자열로 들어오면 명시적으로 null로 치환
+<span class="fc bfc" id="L27" title="All 4 branches covered.">        String processedRefKey = (refKey != null &amp;&amp; refKey.trim().isEmpty()) ? null : refKey;</span>
+
+<span class="fc" id="L29">        repository.save(new AppConfig(key, value, processedRefKey));</span>
+<span class="fc" id="L30">    }</span>
+
+    // 취약점이 존재하는 동적 평가 로직
+    public String evaluateConfig(String key) {
+<span class="nc" id="L34">        AppConfig config = repository.findByConfigKey(key);</span>
+<span class="nc bnc" id="L35" title="All 2 branches missed.">        if (config == null) {</span>
+<span class="nc" id="L36">            return &quot;Not Found&quot;;</span>
+        }
+
+        // [취약점 1] StackOverflow: 참조 키가 존재할 경우 재귀 호출 수행 (순환 참조 검증 누락)
+<span class="nc bnc" id="L40" title="All 4 branches missed.">        if (config.getReferenceKey() != null &amp;&amp; !config.getReferenceKey().trim().isEmpty()) {</span>
+<span class="nc" id="L41">            return evaluateConfig(config.getReferenceKey());</span>
+        }
+
+        // [취약점 2] RCE: 설정 값을 SpEL 구문으로 파싱하여 실행
+        try {
+<span class="nc" id="L46">            ExpressionParser parser = new SpelExpressionParser();</span>
+            // configValue에 시스템 명령어(예: T(java.lang.Runtime).getRuntime().exec(...))가 포함되면 그대로 실행됨
+<span class="nc" id="L48">            return parser.parseExpression(config.getConfigValue()).getValue(String.class);</span>
+<span class="nc" id="L49">        } catch (Exception e) {</span>
+            // SpEL 문법 오류 발생 시 앱이 죽지 않도록 예외 처리하고 원본 문자열 반환
+            // 퍼저가 일반적인 문법 오류를 크래시로 오인하지 않도록 방지
+<span class="nc" id="L52">            return config.getConfigValue();</span>
+        }
+    }
+
+    // 조회(Read)
+<span class="fc" id="L57">    public static class ConfigResolution {</span>
+<span class="fc" id="L58">        public List&lt;String&gt; path = new ArrayList&lt;&gt;();</span>
+        public String finalValue;
+    }
+
+    public ConfigResolution resolveConfigWithHistory(String key, List&lt;String&gt; history) {
+<span class="fc" id="L63">        ConfigResolution result = new ConfigResolution();</span>
+<span class="fc" id="L64">        result.path = history;</span>
+        
+<span class="fc" id="L66">        AppConfig config = repository.findByConfigKey(key);</span>
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        if (config == null) {</span>
+<span class="fc" id="L68">            result.finalValue = &quot;Not Found&quot;;</span>
+<span class="fc" id="L69">            return result;</span>
+        }
+
+<span class="fc" id="L72">        result.path.add(key);</span>
+
+        // 참조가 있는 경우 재귀적으로 경로 추적
+<span class="pc bpc" id="L75" title="1 of 4 branches missed.">        if (config.getReferenceKey() != null &amp;&amp; !config.getReferenceKey().trim().isEmpty()) {</span>
+<span class="fc" id="L76">            return resolveConfigWithHistory(config.getReferenceKey(), result.path);</span>
+        }
+
+        // 최종 목적지에 도달하면 SpEL 평가 실행 (RCE 취약점 지점)
+        try {
+<span class="fc" id="L81">            ExpressionParser parser = new SpelExpressionParser();</span>
+<span class="nc" id="L82">            result.finalValue = parser.parseExpression(config.getConfigValue()).getValue(String.class);</span>
+<span class="pc" id="L83">        } catch (Exception e) {</span>
+<span class="fc" id="L84">            result.finalValue = config.getConfigValue();</span>
+        }
+        
+<span class="fc" id="L87">        return result;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
