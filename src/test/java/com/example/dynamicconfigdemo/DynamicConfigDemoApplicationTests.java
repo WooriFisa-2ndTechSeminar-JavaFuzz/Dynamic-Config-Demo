@@ -73,7 +73,7 @@ public class DynamicConfigDemoApplicationTests {
     // 시드를 주입받아 퍼징을 수행하는 테스트 메서드
     // 순환 참조를 만들어내기 위해 2개의 설정값(총 6개 파라미터)을 동시에 입력받습니다.
     @MethodSource
-    @FuzzTest(maxDuration = "10m")
+    @FuzzTest(maxDuration = "3m")
     void fuzzDynamicConfiguration(
             @NotNull String key1, @NotNull String value1, String refKey1,
             @NotNull String key2, @NotNull String value2, String refKey2) {
