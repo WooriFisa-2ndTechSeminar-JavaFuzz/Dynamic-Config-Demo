@@ -36,10 +36,16 @@ pipeline {
                     ).trim()
                     
                     if (crashes.toInteger() > 0) {
-                        // 크래시가 1개 이상 존재하면 error() 함수를 호출하여 파이프라인을 강제로 FAILURE 상태로 전환하고 중단시킴
-                        error("Jazzer 크래시 감지: ${crashes}개 발견 — 빌드 중단")
+                        // 즉시 error()를 호출하지 않고, 환경 변수에 상태를 기록
+                        env.CRASH_DETECTED = "true"
+                        env.CRASH_COUNT = crashes
+                        echo "🚨 취약점(크래시) ${crashes}개 감지됨! (리포트 생성을 위해 다음 단계로 진행합니다)"
+                        
+                        // 현재 빌드 상태를 불안정(UNSTABLE)으로 마킹하여 UI에서 노란색으로 표시되게 함
+                        currentBuild.result = 'UNSTABLE' 
                     } else {
-                        echo "크래시 미발견: 퍼징 단계를 무사히 통과했습니다."
+                        env.CRASH_DETECTED = "false"
+                        echo "✅ 크래시 미발견: 퍼징 단계를 무사히 통과했습니다."
                     }
                 }
             }
@@ -67,6 +73,17 @@ pipeline {
                         sourcePattern: '**/src/main/java',
                         inclusionPattern: '**/com/example/dynamicconfigdemo/**'
                     )
+                }
+            }
+        }
+
+        stage('Quality Gate Decision') {
+            steps {
+                script {
+                    // 모든 리포트 생성이 끝난 후, 아까 기록해둔 크래시 여부를 확인하여 최종 배포를 차단
+                    if (env.CRASH_DETECTED == "true") {
+                        error("❌ 최종 품질 게이트 실패: 퍼징 중 ${env.CRASH_COUNT}개의 치명적 크래시(취약점)가 발견되어 배포를 차단합니다.")
+                    }
                 }
             }
         }
