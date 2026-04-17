@@ -60,7 +60,7 @@ pipeline {
                     )
                     
                     // 2. jacoco.csv 파일을 읽어 현재 '브랜치 커버리지(Branch Coverage)' 퍼센티지를 정확히 연산
-                    // CSV 구조상 6번째 열(BRANCH_MISSED), 7번째 열(BRANCH_COVERED)을 합산하여 비율을 계산합니다.
+                    // CSV 구조상 6번째 열(BRANCH_MISSED), 7번째 열(BRANCH_COVERED)을 합산하여 비율을 계산
                     def actualCoverage = sh(
                         script: '''
                             if [ -f target/site/jacoco/jacoco.csv ]; then
