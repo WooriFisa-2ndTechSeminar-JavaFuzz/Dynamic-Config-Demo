@@ -91,6 +91,8 @@ mvn spring-boot:run -DskipTests
 
 이 앱은 **동적 설정(Dynamic Configuration)** 을 웹에서 수정하고 즉시 반영하는 컨셉의 간이 Spring Boot 사이트다.
 
+<img width="1512" height="711" alt="dynamic-config-web-ui" src="https://github.com/user-attachments/assets/002a16a8-c1c7-4021-94cc-3a6aaf01ec80" />
+
 핵심 동작은 다음과 같다.
 * 각 설정은 `Key`, `Value`, `Reference key`를 가진다.
 * `Reference key`를 통해 다른 설정 값을 참조할 수 있다.
@@ -117,5 +119,9 @@ mvn spring-boot:run -DskipTests
 
 ### 파이프라인 실행 모습
 
-## 🧪 CI/CD 파이프라인 관찰 포인트
+https://github.com/user-attachments/assets/4d0a213f-be45-412e-9dc9-32290b0d092d
 
+## 🧪 CI/CD 파이프라인 관찰 포인트
+* Jazzer와 JaCoCo 플러그인과 함께 테스트 파이프라인을 Jenkins로 구성하여 그레이박스 퍼징 테스트를 자동화할 수 있다.
+* 크래시 발생 유무와 커버리지 수치를 확인하여 테스트 통과 유무를 결정할 수 있다.
+* 테스트 설정과 툴을 수동으로 조작하는 불편함을 덜고 소프트웨어의 오류를 조기에 발견하고 빠르게 수정하기 위해 테스트 자동화는 필수적이다.
